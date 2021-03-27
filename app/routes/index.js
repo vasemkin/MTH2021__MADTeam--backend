@@ -77,9 +77,22 @@ const index = async function (app, db) {
 
                 const dest_json = {
 
-                    locations: [
-                        `${initial_cords.latitude}%2C${initial_cords.longitude}`,
-                        `${destination_cords.latitude}%2C${destination_cords.longitude}`
+                    locations: [ {
+
+                        "latLng" : {
+                            "lat" : initial_cords.latitude,
+                            "lng" : initial_cords.longitude
+                        }
+
+                    }, {
+
+                        "latLng" : {
+                            "lat" : destination_cords.latitude,
+                            "lng" : destination_cords.longitude
+                        }
+
+                    }
+                    
                     ],
 
                     options: {
@@ -90,12 +103,14 @@ const index = async function (app, db) {
                         generalize: 0,
                         routeType: 'pedestrian',
                         timeType: 1,
-                        locale: 'en_US',
+                        locale: 'ru_RU',
                         unit: 'm',
                         enhancedNarrative: false,
                     }
 
                 }
+
+                console.log(dest_json);
        
                 const destinations_query_route = `http://open.mapquestapi.com/directions/v2/route?key=${key}`;
 
