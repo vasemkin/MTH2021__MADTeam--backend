@@ -7,7 +7,7 @@ let user_model = new Schema(
     uuid: {
       type: String
     },
-    interests: {
+    routes: {
       type: Array
     }
   },

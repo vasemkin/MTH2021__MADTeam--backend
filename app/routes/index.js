@@ -25,11 +25,14 @@ const index = async function (app, db) {
 
     });
 
+    app.post('/api/save_route', (req, res) => {
+
+    })
+
     app.post('/api/gen_user', (req, res) => {
 
         // schema:
         // uuid: string
-        // interests: array
 
         const new_user = new User({
             uuid: req.body.uuid,
@@ -51,13 +54,16 @@ const index = async function (app, db) {
 
     });
 
-    app.post('/api/redraw_route', (req, res) => {
+
+    app.post('/api/get_places', (req, res) => {
+
+        //construct viewbox for finding places
 
         const places_arr = req.body.places;
 
         let locations = [];
 
-        for (place in places_arr) {
+        for (let place in places_arr) {
 
             const temp = {
                 "latLng" : {
@@ -68,70 +74,23 @@ const index = async function (app, db) {
 
             locations.push(temp);
         }
-
-        const redraw_route_query = {
-
-            locations: locations,
-
-            options: {
-                avoids: [],
-                avoidTimedConditions: false,
-                doReverseGeocode: true,
-                shapeFormat: 'raw',
-                generalize: 0,
-                routeType: 'pedestrian',
-                timeType: 1,
-                locale: 'ru_RU',
-                unit: 'm',
-                enhancedNarrative: false,
-            }
-
-        }
-
-        axios({
-
-            method: 'post',
-            url: destinations_query_route,
-            data: redraw_route_query
-
-        }).then(result => {
-
-            try {
-
-                const new_shapes = genShapes(result.data.route.shape.shapePoints);
-
-                res.json({
-                            directions : new_shapes
-                        });
-                
-            } catch (error) {
-
-                console.log(error);
-                
-            }
-
-
-        })
-
-    });
-
-    app.post('/api/get_places', (req, res) => {
-
-        //construct viewbox for finding places
+        
 
         const initial_cords = {
-            latitude: req.body.initial_latitude,
-            longitude: req.body.initial_longitude
+            latitude: locations[0].latLng.lat,
+            longitude: locations[0].latLng.lng
         };
 
         const destination_cords = {
-            latitude: req.body.destination_latitude,
-            longitude: req.body.destination_longitude
+            latitude: locations[locations.length - 1].latLng.lat,
+            longitude: locations[locations.length - 1].latLng.lng
         };
+
+        console.log(initial_cords, destination_cords);
 
         const osm_viewbox = constructSearchArea(initial_cords, destination_cords);
 
-        const places_query_route = `http://open.mapquestapi.com/nominatim/v1/search.php?key=${key}&q="[hospital]"&format=json&bounded=1&q=[pub]&viewbox=${osm_viewbox}`;
+        const places_query_route = `http://open.mapquestapi.com/nominatim/v1/search.php?key=${key}&q="[hospital]"&format=json&bounded=1&viewbox=${osm_viewbox}`;
 
         axios.get(places_query_route)
 
@@ -139,25 +98,10 @@ const index = async function (app, db) {
 
             .then(response => {
 
-                const dest_json = {
+                
+                const redraw_route_query = {
 
-                    locations: [ {
-
-                        "latLng" : {
-                            "lat" : initial_cords.latitude,
-                            "lng" : initial_cords.longitude
-                        }
-
-                    }, {
-
-                        "latLng" : {
-                            "lat" : destination_cords.latitude,
-                            "lng" : destination_cords.longitude
-                        }
-
-                    }
-
-                    ],
+                    locations: locations,
 
                     options: {
                         avoids: [],
@@ -174,14 +118,14 @@ const index = async function (app, db) {
 
                 }
 
-                console.log(dest_json);
+                console.log(redraw_route_query);
        
 
                 axios({
 
                     method: 'post',
                     url: destinations_query_route,
-                    data: dest_json
+                    data: redraw_route_query
 
                 }).then(dest_res => {
 
