@@ -24,7 +24,10 @@ readFile(config_path).then(config => {
     }
   )
   
-  app.use(bodyParser.urlencoded({ extended: true }));
+
+  app.use(bodyParser.urlencoded({ extended: false }));
+  // parse application/json
+  app.use(bodyParser.json())
 
   require('./app/routes')(app, mongoose);
   

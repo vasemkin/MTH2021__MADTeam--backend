@@ -3,15 +3,15 @@ const path = require('path');
 var appRoot = require('app-root-path');
 const readFile = require('../../misc/readFile');
 const constructSearchArea = require('../../misc/constructSearchArea');
+const genShapes = require('../../misc/genShapes');
 const User = require("./models.js");
 
 const index = async function (app, db) {
 
     const config_path = path.join(appRoot.toString(), 'config', 'config.json');
-
     const config = await readFile(config_path);
-
     const key = config.mapQuestKey;
+    const destinations_query_route = `http://open.mapquestapi.com/directions/v2/route?key=${key}`;
 
     app.get('/api/list_users', (req, res) => {
 
@@ -48,6 +48,70 @@ const index = async function (app, db) {
 
           });
           
+
+    });
+
+    app.post('/api/redraw_route', (req, res) => {
+
+        const places_arr = req.body.places;
+
+        let locations = [];
+
+        for (place in places_arr) {
+
+            const temp = {
+                "latLng" : {
+                    "lat" : places_arr[place].latitude,
+                    "lng" : places_arr[place].longitude,
+                }
+            }
+
+            locations.push(temp);
+        }
+
+        const redraw_route_query = {
+
+            locations: locations,
+
+            options: {
+                avoids: [],
+                avoidTimedConditions: false,
+                doReverseGeocode: true,
+                shapeFormat: 'raw',
+                generalize: 0,
+                routeType: 'pedestrian',
+                timeType: 1,
+                locale: 'ru_RU',
+                unit: 'm',
+                enhancedNarrative: false,
+            }
+
+        }
+
+        axios({
+
+            method: 'post',
+            url: destinations_query_route,
+            data: redraw_route_query
+
+        }).then(result => {
+
+            try {
+
+                const new_shapes = genShapes(result.data.route.shape.shapePoints);
+
+                res.json({
+                            directions : new_shapes
+                        });
+                
+            } catch (error) {
+
+                console.log(error);
+                
+            }
+
+
+        })
 
     });
 
@@ -92,7 +156,7 @@ const index = async function (app, db) {
                         }
 
                     }
-                    
+
                     ],
 
                     options: {
@@ -112,7 +176,6 @@ const index = async function (app, db) {
 
                 console.log(dest_json);
        
-                const destinations_query_route = `http://open.mapquestapi.com/directions/v2/route?key=${key}`;
 
                 axios({
 
@@ -124,11 +187,25 @@ const index = async function (app, db) {
 
                     //send response
 
-                    res.json({
-                        places: response.data, 
-                        directions : dest_res.data.route.shape.shapePoints
-                    })
+                    try {
+
+                        const shapes_array = genShapes(dest_res.data.route.shape.shapePoints);
     
+                        res.json({
+                            places: response.data, 
+                            directions : shapes_array
+                        })
+        
+                        
+                    } catch (error) {
+                        
+                        console.log(error);
+                        
+                        res.json({
+                            'status' : 'error'
+                        })
+
+                    }
 
                 });
 
