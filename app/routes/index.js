@@ -53,6 +53,8 @@ const index = async function (app, db) {
 
     app.post('/api/get_places', (req, res) => {
 
+        //construct viewbox for finding places
+
         const initial_cords = {
             latitude: req.body.initial_latitude,
             longitude: req.body.initial_longitude
@@ -65,18 +67,58 @@ const index = async function (app, db) {
 
         const osm_viewbox = constructSearchArea(initial_cords, destination_cords);
 
-        console.log(osm_viewbox);
-
-        const places_query_route = `http://open.mapquestapi.com/nominatim/v1/search.php?key=${key}&format=json&bounded=1&q=[pub]&viewbox=${osm_viewbox}`;
+        const places_query_route = `http://open.mapquestapi.com/nominatim/v1/search.php?key=${key}&q="[hospital]"&format=json&bounded=1&q=[pub]&viewbox=${osm_viewbox}`;
 
         axios.get(places_query_route)
-            
+
+            //get the preffered route
+
             .then(response => {
 
-                res.json({
-                    resp: response.data
-                })
+                const dest_json = {
 
+                    locations: [
+                        `${initial_cords.latitude}%2C${initial_cords.longitude}`,
+                        `${destination_cords.latitude}%2C${destination_cords.longitude}`
+                    ],
+
+                    options: {
+                        avoids: [],
+                        avoidTimedConditions: false,
+                        doReverseGeocode: true,
+                        shapeFormat: 'raw',
+                        generalize: 0,
+                        routeType: 'pedestrian',
+                        timeType: 1,
+                        locale: 'en_US',
+                        unit: 'm',
+                        enhancedNarrative: false,
+                    }
+
+                }
+       
+                const destinations_query_route = `http://open.mapquestapi.com/directions/v2/route?key=${key}`;
+
+                axios({
+
+                    method: 'post',
+                    url: destinations_query_route,
+                    data: dest_json
+
+                }).then(dest_res => {
+
+                    //send response
+
+                    res.json({
+                        places: response.data, 
+                        directions : dest_res.data.route.shape.shapePoints
+                    })
+    
+
+                });
+
+
+                
 
             })
             .catch((error) => {
