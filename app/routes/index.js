@@ -86,11 +86,11 @@ const index = async function (app, db) {
             longitude: locations[locations.length - 1].latLng.lng
         };
 
-        console.log(initial_cords, destination_cords);
+        console.log(locations);
 
         const osm_viewbox = constructSearchArea(initial_cords, destination_cords);
 
-        const places_query_route = `http://open.mapquestapi.com/nominatim/v1/search.php?key=${key}&q="[hospital]"&format=json&bounded=1&viewbox=${osm_viewbox}`;
+        const places_query_route = `http://open.mapquestapi.com/nominatim/v1/search.php?key=${key}&q=[hospitals]&format=json&bounded=1&viewbox=${osm_viewbox}`;
 
         axios.get(places_query_route)
 
@@ -98,7 +98,6 @@ const index = async function (app, db) {
 
             .then(response => {
 
-                
                 const redraw_route_query = {
 
                     locations: locations,
@@ -117,9 +116,6 @@ const index = async function (app, db) {
                     }
 
                 }
-
-                console.log(redraw_route_query);
-       
 
                 axios({
 
@@ -140,6 +136,7 @@ const index = async function (app, db) {
                             directions : shapes_array
                         })
         
+                        console.log(response);
                         
                     } catch (error) {
                         
