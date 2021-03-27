@@ -15,11 +15,17 @@ const index = async function (app, db) {
 
     app.get('/api/list_users', (req, res) => {
 
-        User.find({}, function(err, result) {
+    // a debug endpoint
+
+        User.find({ "uuid" : "admin" }, function(err, result) {
             if (err) {
+
               console.log(err);
+
             } else {
+
               res.json(result);
+
             }
           });
 
@@ -28,18 +34,86 @@ const index = async function (app, db) {
     app.post('/api/save_route', (req, res) => {
 
         const uuid = req.body.uuid;
-
         const route = req.body.route;
+
+        //route schema
+
+        // {
+        //     "name" : "my awesome route",
+        //     "route_id" : "xxxxxxx"
+        //     "type" : "route || activity",
+        //     "due_time" : "10.10.2010 10:10" (better as unix time)
+        //     "points" : array
+        //     "markers" : [
+        //          {
+        //              "latitude" : "val",
+        //              "longitude" : "val",
+        //              "title" : "str",
+        //          }
+        //      ]
+        // }
+
+        User.find({ "uuid" : uuid }, async function(err, result) {
+
+            try {
+
+                result[0].routes.push(route);
+                await result[0].save();
+    
+                res.json({
+                    "status" : "ok"
+                });
+    
+                
+            } catch (error) {
+
+                res.json({
+                    "status" : "error",
+                    "message" : error.message
+                });
+                
+            }
+        })
+
+    })
+
+    app.post('/api/remove_route', (req, res) => {
+
+        const uuid = req.body.uuid;
+        const route_id = req.body.route_id;
 
         User.find({ "uuid" : uuid }, function(err, result) {
 
-            result[0].routes.push(route);
-            result[0].save();
+            try {
 
-            res.json({
-                "status" : "ok"
-            });
+                const routes = result[0].routes;
 
+                routes.forEach(async route => {
+
+                    if (route.route_id === route_id) {
+
+                        const index = routes.indexOf(route);
+                        index > -1 ? routes.splice(index, 1) : null;
+                        await result[0].save();
+
+                        res.json({
+                            "status" : "ok"
+                        });
+            
+
+                    }
+
+                });
+    
+                
+            } catch (error) {
+
+                res.json({
+                    "status" : "error",
+                    "message" : error.message
+                });
+                
+            }
         })
 
     })
@@ -63,8 +137,6 @@ const index = async function (app, db) {
                 "status" : "ok"
             });
 
-            console.log('added new user');
-
           });
           
 
@@ -76,38 +148,22 @@ const index = async function (app, db) {
         //construct viewbox for finding places
 
         const places_arr = req.body.places;
+        const place_type = req.body.type || 'pubs';
 
         let locations = [];
-        let costyl = [];
 
         for (let place in places_arr) {
 
-            // const temp = {
-            //     "latLng" : {
-            //         "lat" : places_arr[place].latitude,
-            //         "lng" : places_arr[place].longitude,
-            //     }
-            // }
-
-            const temp_costyl = [places_arr[place].latitude, places_arr[place].longitude];
-            costyl.push(temp_costyl);
-
-        }
-        
-        costyl.forEach(cost => {
-
             const temp = {
                 "latLng" : {
-                    "lat" : cost[0],
-                    "lng" : cost[1],
+                    "lat" : places_arr[place].latitude,
+                    "lng" : places_arr[place].longitude,
                 }
-            }           
+            }
 
             locations.push(temp); 
 
-        });
-
-        console.log(locations);
+        }
 
         const initial_cords = {
             latitude: locations[0].latLng.lat,
@@ -121,7 +177,7 @@ const index = async function (app, db) {
 
         const osm_viewbox = constructSearchArea(initial_cords, destination_cords);
 
-        const places_query_route = `http://open.mapquestapi.com/nominatim/v1/search.php?key=${key}&q=[hospitals]&format=json&bounded=1&viewbox=${osm_viewbox}`;
+        const places_query_route = `http://open.mapquestapi.com/nominatim/v1/search.php?key=${key}&q=[${place_type}]&format=json&bounded=1&viewbox=${osm_viewbox}`;
 
         axios.get(places_query_route)
 
@@ -156,16 +212,13 @@ const index = async function (app, db) {
 
                 }).then(dest_res => {
 
-                    //send response
-
-                    // console.log(dest_res.data);
-                    console.log(dest_res.data.route);
 
                     try {
 
                         const shapes_array = genShapes(dest_res.data.route.shape.shapePoints);
     
                         res.json({
+                            names: dest_res.data.route.locations,
                             places: response.data, 
                             directions : shapes_array
                         })
