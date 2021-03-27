@@ -2,7 +2,7 @@
   "name": "mth2021__madteam--backend",
   "version": "0.0.1",
   "description": "Moscow Travel Hack",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -17,7 +17,14 @@
   },
   "homepage": "https://github.com/vasemkin/MTH2021__MADTeam--backend#readme",
   "dependencies": {
+    "@googlemaps/google-maps-services-js": "^3.1.16",
+    "app-root-path": "^3.0.0",
+    "axios": "^0.21.1",
+    "body-parser": "^1.19.0",
     "express": "^4.17.1",
     "mongoose": "^5.12.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.7"
   }
 }
