@@ -11,7 +11,7 @@ const index = async function (app, db) {
     const config_path = path.join(appRoot.toString(), 'config', 'config.json');
     const config = await readFile(config_path);
     const key = config.mapQuestKey;
-    const destinations_query_route = `http://open.mapquestapi.com/directions/v2/route?key=${key}`;
+    const destinations_query_route = `http://open.mapquestapi.com/directions/v2/optimizedroute?key=${key}`;
 
     app.get('/api/list_users', (req, res) => {
 
@@ -27,16 +27,32 @@ const index = async function (app, db) {
 
     app.post('/api/save_route', (req, res) => {
 
+        const uuid = req.body.uuid;
+
+        const route = req.body.route;
+
+        User.find({ "uuid" : uuid }, function(err, result) {
+
+            result[0].routes.push(route);
+            result[0].save();
+
+            res.json({
+                "status" : "ok"
+            });
+
+        })
+
     })
 
     app.post('/api/gen_user', (req, res) => {
 
         // schema:
         // uuid: string
+        // routes: array
 
         const new_user = new User({
             uuid: req.body.uuid,
-            interests: req.body.interests
+            routes: req.body.routes
         });
 
         new_user.save(function (err) {
@@ -62,19 +78,36 @@ const index = async function (app, db) {
         const places_arr = req.body.places;
 
         let locations = [];
+        let costyl = [];
 
         for (let place in places_arr) {
 
-            const temp = {
-                "latLng" : {
-                    "lat" : places_arr[place].latitude,
-                    "lng" : places_arr[place].longitude,
-                }
-            }
+            // const temp = {
+            //     "latLng" : {
+            //         "lat" : places_arr[place].latitude,
+            //         "lng" : places_arr[place].longitude,
+            //     }
+            // }
 
-            locations.push(temp);
+            const temp_costyl = [places_arr[place].latitude, places_arr[place].longitude];
+            costyl.push(temp_costyl);
+
         }
         
+        costyl.forEach(cost => {
+
+            const temp = {
+                "latLng" : {
+                    "lat" : cost[0],
+                    "lng" : cost[1],
+                }
+            }           
+
+            locations.push(temp); 
+
+        });
+
+        console.log(locations);
 
         const initial_cords = {
             latitude: locations[0].latLng.lat,
@@ -85,8 +118,6 @@ const index = async function (app, db) {
             latitude: locations[locations.length - 1].latLng.lat,
             longitude: locations[locations.length - 1].latLng.lng
         };
-
-        console.log(locations);
 
         const osm_viewbox = constructSearchArea(initial_cords, destination_cords);
 
@@ -127,6 +158,9 @@ const index = async function (app, db) {
 
                     //send response
 
+                    // console.log(dest_res.data);
+                    console.log(dest_res.data.route);
+
                     try {
 
                         const shapes_array = genShapes(dest_res.data.route.shape.shapePoints);
@@ -135,8 +169,6 @@ const index = async function (app, db) {
                             places: response.data, 
                             directions : shapes_array
                         })
-        
-                        console.log(response);
                         
                     } catch (error) {
                         
