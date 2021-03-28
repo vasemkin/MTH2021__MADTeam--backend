@@ -118,6 +118,33 @@ const index = async function (app, db) {
 
     })
 
+    app.get('/api/get_route', (req, res) => {
+
+        const uuid = req.headers.uuid;
+
+        User.find({ "uuid" : uuid }, function(err, result) {
+
+            try {
+
+                const routes = result[0].routes;
+
+                res.json({
+                    "routes" : routes,
+                })
+    
+                
+            } catch (error) {
+
+                res.json({
+                    "status" : "error",
+                    "message" : error.message
+                });
+                
+            }
+        })
+
+    })
+
     app.post('/api/gen_user', (req, res) => {
 
         // schema:
@@ -222,6 +249,12 @@ const index = async function (app, db) {
                             places: response.data, 
                             directions : shapes_array
                         })
+
+                        console.log({
+                            names: dest_res.data.route.locations,
+                            places: response.data, 
+                            directions : shapes_array
+                        });
                         
                     } catch (error) {
                         
